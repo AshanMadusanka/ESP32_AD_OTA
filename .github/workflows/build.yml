@@ -16,16 +16,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Build firmware with ESP-IDF
+      - name: Setup ESP-IDF and build
         uses: espressif/esp-idf-ci-action@v1
         with:
           esp_idf_version: v4.4.4
           target: esp32
           path: .
-          # always start from a fresh build directory in the container
-          command: >
-            rm -rf build &&
-            idf.py set-target esp32 &&
+          command: |
+            rm -rf build
+            idf.py set-target esp32
             idf.py build
 
       - name: Create GitHub Release and upload firmware
