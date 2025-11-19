@@ -19,7 +19,7 @@
 #include "nvs.h"
 #include "nvs_flash.h"
 #include "protocol_examples_common.h"
-
+#include "esp_crt_bundle.h"
 #if CONFIG_BOOTLOADER_APP_ANTI_ROLLBACK
 #include "esp_efuse.h"
 #endif
@@ -37,6 +37,14 @@ extern const uint8_t server_cert_pem_start[] asm("_binary_ca_cert_pem_start");
 extern const uint8_t server_cert_pem_end[] asm("_binary_ca_cert_pem_end");
 
 #define OTA_URL_SIZE 256
+
+#define GITHUB_USER  "AshanMadusanka"
+#define GITHUB_REPO  "ESP32_AD_OTA"
+#define OTA_FIRMWARE_URL "https://github.com/AshanMadusanka/ESP32_AD_OTA/releases/download/v1.0.1/ESP32_AD_OTA.bin"
+
+#include "esp_sntp.h"
+#include <time.h>
+//https://github.com/AshanMadusanka/ESP32_AD_OTA/releases/download/v1.0.1/ESP32_AD_OTA.bin
 
 static esp_err_t validate_image_header(esp_app_desc_t *new_app_info)
 {
@@ -81,31 +89,44 @@ static esp_err_t _http_client_init_cb(esp_http_client_handle_t http_client)
     return err;
 }
 
+
+static void initialize_sntp(void)
+{
+    sntp_setoperatingmode(SNTP_OPMODE_POLL);
+    sntp_setservername(0, "pool.ntp.org");
+    sntp_init();
+}
+
+static void wait_for_time(void)
+{
+    time_t now = 0;
+    struct tm timeinfo = { 0 };
+
+    while (timeinfo.tm_year < (2020 - 1900)) {
+        time(&now);
+        localtime_r(&now, &timeinfo);
+        vTaskDelay(pdMS_TO_TICKS(2000));
+    }
+
+    ESP_LOGI("TIME", "Time is set: %s", asctime(&timeinfo));
+}
+
 void advanced_ota_example_task(void *pvParameter)
 {
     ESP_LOGI(TAG, "Starting Advanced OTA example");
 
     esp_err_t ota_finish_err = ESP_OK;
     esp_http_client_config_t config = {
-        .url = CONFIG_EXAMPLE_FIRMWARE_UPGRADE_URL,
-        .cert_pem = (char *)server_cert_pem_start,
-        .timeout_ms = CONFIG_EXAMPLE_OTA_RECV_TIMEOUT,
+        .url = OTA_FIRMWARE_URL,
+        .crt_bundle_attach = esp_crt_bundle_attach, // Use crt bundle function to load root certificates, Dont use .cert_pem field
+        .timeout_ms = 15000,
         .keep_alive_enable = true,
+        .buffer_size = 8192, // Icrease buffer size to speed up download
+        .buffer_size_tx = 4096, // Icrease TX buffer size
+        .max_redirection_count = 10
     };
 
-#ifdef CONFIG_EXAMPLE_FIRMWARE_UPGRADE_URL_FROM_STDIN
-    char url_buf[OTA_URL_SIZE];
-    if (strcmp(config.url, "FROM_STDIN") == 0) {
-        example_configure_stdin_stdout();
-        fgets(url_buf, OTA_URL_SIZE, stdin);
-        int len = strlen(url_buf);
-        url_buf[len - 1] = '\0';
-        config.url = url_buf;
-    } else {
-        ESP_LOGE(TAG, "Configuration mismatch: wrong firmware upgrade image url");
-        abort();
-    }
-#endif
+
 
 #ifdef CONFIG_EXAMPLE_SKIP_COMMON_NAME_CHECK
     config.skip_cert_common_name_check = true;
@@ -141,6 +162,7 @@ void advanced_ota_example_task(void *pvParameter)
 
     while (1) {
         err = esp_https_ota_perform(https_ota_handle);
+        vTaskDelay(10 / portTICK_PERIOD_MS); // Critical point this delay to avoid watchdog trigger during OTA download
         if (err != ESP_ERR_HTTPS_OTA_IN_PROGRESS) {
             break;
         }
@@ -195,6 +217,7 @@ void app_main(void)
      * Read "Establishing Wi-Fi or Ethernet Connection" section in
      * examples/protocols/README.md for more information about this function.
     */
+  
     ESP_ERROR_CHECK(example_connect());
 
 #if defined(CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE)
@@ -216,25 +239,9 @@ void app_main(void)
     }
 #endif
 
-#if CONFIG_EXAMPLE_CONNECT_WIFI
-#if !CONFIG_BT_ENABLED
-    /* Ensure to disable any WiFi power save mode, this allows best throughput
-     * and hence timings for overall OTA operation.
-     */
-    esp_wifi_set_ps(WIFI_PS_NONE);
-#else
-    /* WIFI_PS_MIN_MODEM is the default mode for WiFi Power saving. When both
-     * WiFi and Bluetooth are running, WiFI modem has to go down, hence we
-     * need WIFI_PS_MIN_MODEM. And as WiFi modem goes down, OTA download time
-     * increases.
-     */
-    esp_wifi_set_ps(WIFI_PS_MIN_MODEM);
-#endif // CONFIG_BT_ENABLED
-#endif // CONFIG_EXAMPLE_CONNECT_WIFI
 
-#if CONFIG_BT_BLE_ENABLED || CONFIG_BT_NIMBLE_ENABLED
-    esp_ble_helper_init();
-#endif
 
+   initialize_sntp();
+   wait_for_time();
     xTaskCreate(&advanced_ota_example_task, "advanced_ota_example_task", 1024 * 8, NULL, 5, NULL);
 }
