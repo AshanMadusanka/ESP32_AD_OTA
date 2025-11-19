@@ -16,22 +16,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup ESP-IDF
+      - name: Build firmware with ESP-IDF
         uses: espressif/esp-idf-ci-action@v1
         with:
           esp_idf_version: v4.4.4
           target: esp32
           path: .
-
-      - name: Build firmware
-        run: |
-          idf.py set-target esp32
-          idf.py build
+          # always start from a fresh build directory in the container
+          command: >
+            rm -rf build &&
+            idf.py set-target esp32 &&
+            idf.py build
 
       - name: Create GitHub Release and upload firmware
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            build/ESP32_AD_OTA.bin    # <- same as your project() name
+            build/ESP32_AD_OTA.bin
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
