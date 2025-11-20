@@ -41,8 +41,7 @@ extern const uint8_t server_cert_pem_end[] asm("_binary_ca_cert_pem_end");
 
 #define GITHUB_USER  "AshanMadusanka"
 #define GITHUB_REPO  "ESP32_AD_OTA"
-#define OTA_FIRMWARE_URL "https://github.com/AshanMadusanka/ESP32_AD_OTA/releases/download/v1.0.1/ESP32_AD_OTA.bin"
-
+#define OTA_FIRMWARE_URL "https://github.com/AshanMadusanka/ESP32_AD_OTA/releases/download/v1.1.2/ESP32_AD_OTA.bin"
 #include "esp_sntp.h"
 #include <time.h>
 //https://github.com/AshanMadusanka/ESP32_AD_OTA/releases/download/v1.0.1/ESP32_AD_OTA.bin
