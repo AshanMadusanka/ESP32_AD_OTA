@@ -20,6 +20,7 @@
 #include "nvs_flash.h"
 #include "protocol_examples_common.h"
 #include "esp_crt_bundle.h"
+#include "driver/gpio.h"
 #if CONFIG_BOOTLOADER_APP_ANTI_ROLLBACK
 #include "esp_efuse.h"
 #endif
@@ -199,6 +200,7 @@ ota_end:
 void app_main(void)
 {
     // Initialize NVS.
+    
     esp_err_t err = nvs_flash_init();
     if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
         // 1.OTA app partition table has a smaller NVS partition size than the non-OTA
@@ -244,4 +246,22 @@ void app_main(void)
    initialize_sntp();
    wait_for_time();
     xTaskCreate(&advanced_ota_example_task, "advanced_ota_example_task", 1024 * 8, NULL, 5, NULL);
+    xTaskCreate(&led_blink_task, "led_blink_task", 2048, NULL, 5, NULL);
+}
+
+void led_blink_task(void *pvParameter)
+{
+   ESP_LOGI(TAG, "Blink task started");
+
+    // Legacy configuration API
+    gpio_pad_select_gpio(2);
+    gpio_set_direction(2, GPIO_MODE_OUTPUT);
+
+    while (1) {
+        gpio_set_level(2, 1);    // LED ON
+        vTaskDelay(pdMS_TO_TICKS(500));
+
+        gpio_set_level(2, 0);    // LED OFF
+        vTaskDelay(pdMS_TO_TICKS(500));
+    }
 }
