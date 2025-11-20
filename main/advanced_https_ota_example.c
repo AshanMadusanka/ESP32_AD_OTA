@@ -44,7 +44,8 @@ extern const uint8_t server_cert_pem_end[] asm("_binary_ca_cert_pem_end");
 #define OTA_FIRMWARE_URL "https://github.com/AshanMadusanka/ESP32_AD_OTA/releases/download/v1.1.4/ESP32_AD_OTA.bin"
 #include "esp_sntp.h"
 #include <time.h>
-//https://github.com/AshanMadusanka/ESP32_AD_OTA/releases/download/v1.0.1/ESP32_AD_OTA.bin
+
+void led_blink_task(void *pvParameter);
 
 static esp_err_t validate_image_header(esp_app_desc_t *new_app_info)
 {
