@@ -246,7 +246,7 @@ void app_main(void)
    initialize_sntp();
    wait_for_time();
     xTaskCreate(&advanced_ota_example_task, "advanced_ota_example_task", 1024 * 8, NULL, 5, NULL);
-    xTaskCreate(&led_blink_task, "led_blink_task", 2048, NULL, 5, NULL);
+   // xTaskCreate(&led_blink_task, "led_blink_task", 2048, NULL, 5, NULL);
 }
 
 void led_blink_task(void *pvParameter)
