@@ -168,7 +168,7 @@ void advanced_ota_example_task(void *pvParameter)
     while (1)
     {
         err = esp_https_ota_perform(https_ota_handle);
-        vTaskDelay(10 / portTICK_PERIOD_MS); // Critical point this delay to avoid watchdog trigger during OTA download
+        vTaskDelay(100 / portTICK_PERIOD_MS); // Critical point this delay to avoid watchdog trigger during OTA download
         if (err != ESP_ERR_HTTPS_OTA_IN_PROGRESS) {
             break;
         }
@@ -275,9 +275,11 @@ void led_blink_task(void *pvParameter)
     while (1)
     {
         gpio_set_level(2, 1);
-        vTaskDelay(pdMS_TO_TICKS(500));
+        vTaskDelay(pdMS_TO_TICKS(200));
+        ESP_LOGI(TAG, "LED ON");
 
         gpio_set_level(2, 0);
-        vTaskDelay(pdMS_TO_TICKS(500));
+        vTaskDelay(pdMS_TO_TICKS(200));
+        ESP_LOGI(TAG, "LED OFF");
     }
 }
