@@ -39,8 +39,8 @@ extern const uint8_t server_cert_pem_end[] asm("_binary_ca_cert_pem_end");
 
 #define OTA_URL_SIZE 256
 
-#define GITHUB_USER  "AshanMadusanka"
-#define GITHUB_REPO  "ESP32_AD_OTA"
+#define GITHUB_USER "AshanMadusanka"
+#define GITHUB_REPO "ESP32_AD_OTA"
 #define OTA_FIRMWARE_URL "https://github.com/AshanMadusanka/ESP32_AD_OTA/releases/download/v1.1.4/ESP32_AD_OTA.bin"
 #include "esp_sntp.h"
 #include <time.h>
@@ -49,18 +49,21 @@ void led_blink_task(void *pvParameter);
 
 static esp_err_t validate_image_header(esp_app_desc_t *new_app_info)
 {
-    if (new_app_info == NULL) {
+    if (new_app_info == NULL)
+    {
         return ESP_ERR_INVALID_ARG;
     }
 
     const esp_partition_t *running = esp_ota_get_running_partition();
     esp_app_desc_t running_app_info;
-    if (esp_ota_get_partition_description(running, &running_app_info) == ESP_OK) {
+    if (esp_ota_get_partition_description(running, &running_app_info) == ESP_OK)
+    {
         ESP_LOGI(TAG, "Running firmware version: %s", running_app_info.version);
     }
 
 #ifndef CONFIG_EXAMPLE_SKIP_VERSION_CHECK
-    if (memcmp(new_app_info->version, running_app_info.version, sizeof(new_app_info->version)) == 0) {
+    if (memcmp(new_app_info->version, running_app_info.version, sizeof(new_app_info->version)) == 0)
+    {
         ESP_LOGW(TAG, "Current running version is the same as a new. We will not continue the update.");
         return ESP_FAIL;
     }
@@ -73,7 +76,8 @@ static esp_err_t validate_image_header(esp_app_desc_t *new_app_info)
      * esp_https_ota_finish at the end of OTA update procedure.
      */
     const uint32_t hw_sec_version = esp_efuse_read_secure_version();
-    if (new_app_info->secure_version < hw_sec_version) {
+    if (new_app_info->secure_version < hw_sec_version)
+    {
         ESP_LOGW(TAG, "New firmware security version is less than eFuse programmed, %d < %d", new_app_info->secure_version, hw_sec_version);
         return ESP_FAIL;
     }
@@ -90,7 +94,6 @@ static esp_err_t _http_client_init_cb(esp_http_client_handle_t http_client)
     return err;
 }
 
-
 static void initialize_sntp(void)
 {
     sntp_setoperatingmode(SNTP_OPMODE_POLL);
@@ -101,9 +104,10 @@ static void initialize_sntp(void)
 static void wait_for_time(void)
 {
     time_t now = 0;
-    struct tm timeinfo = { 0 };
+    struct tm timeinfo = {0};
 
-    while (timeinfo.tm_year < (2020 - 1900)) {
+    while (timeinfo.tm_year < (2020 - 1900))
+    {
         time(&now);
         localtime_r(&now, &timeinfo);
         vTaskDelay(pdMS_TO_TICKS(2000));
@@ -122,12 +126,9 @@ void advanced_ota_example_task(void *pvParameter)
         .crt_bundle_attach = esp_crt_bundle_attach, // Use crt bundle function to load root certificates, Dont use .cert_pem field
         .timeout_ms = 15000,
         .keep_alive_enable = true,
-        .buffer_size = 8192, // Icrease buffer size to speed up download
+        .buffer_size = 8192,    // Icrease buffer size to speed up download
         .buffer_size_tx = 4096, // Icrease TX buffer size
-        .max_redirection_count = 10
-    };
-
-
+        .max_redirection_count = 10};
 
 #ifdef CONFIG_EXAMPLE_SKIP_COMMON_NAME_CHECK
     config.skip_cert_common_name_check = true;
@@ -144,26 +145,30 @@ void advanced_ota_example_task(void *pvParameter)
 
     esp_https_ota_handle_t https_ota_handle = NULL;
     esp_err_t err = esp_https_ota_begin(&ota_config, &https_ota_handle);
-    if (err != ESP_OK) {
+    if (err != ESP_OK)
+    {
         ESP_LOGE(TAG, "ESP HTTPS OTA Begin failed");
         vTaskDelete(NULL);
     }
 
     esp_app_desc_t app_desc;
     err = esp_https_ota_get_img_desc(https_ota_handle, &app_desc);
-    if (err != ESP_OK) {
+    if (err != ESP_OK)
+    {
         ESP_LOGE(TAG, "esp_https_ota_read_img_desc failed");
         goto ota_end;
     }
     err = validate_image_header(&app_desc);
-    if (err != ESP_OK) {
+    if (err != ESP_OK)
+    {
         ESP_LOGE(TAG, "image header verification failed");
         goto ota_end;
     }
 
-    while (1) {
+    while (1)
+    {
         err = esp_https_ota_perform(https_ota_handle);
-        vTaskDelay(100 / portTICK_PERIOD_MS); // Critical point this delay to avoid watchdog trigger during OTA download
+        vTaskDelay(10 / portTICK_PERIOD_MS); // Critical point this delay to avoid watchdog trigger during OTA download
         if (err != ESP_ERR_HTTPS_OTA_IN_PROGRESS) {
             break;
         }
@@ -173,17 +178,24 @@ void advanced_ota_example_task(void *pvParameter)
         ESP_LOGD(TAG, "Image bytes read: %d", esp_https_ota_get_image_len_read(https_ota_handle));
     }
 
-    if (esp_https_ota_is_complete_data_received(https_ota_handle) != true) {
+    if (esp_https_ota_is_complete_data_received(https_ota_handle) != true)
+    {
         // the OTA image was not completely received and user can customise the response to this situation.
         ESP_LOGE(TAG, "Complete data was not received.");
-    } else {
+    }
+    else
+    {
         ota_finish_err = esp_https_ota_finish(https_ota_handle);
-        if ((err == ESP_OK) && (ota_finish_err == ESP_OK)) {
+        if ((err == ESP_OK) && (ota_finish_err == ESP_OK))
+        {
             ESP_LOGI(TAG, "ESP_HTTPS_OTA upgrade successful. Rebooting ...");
             vTaskDelay(1000 / portTICK_PERIOD_MS);
             esp_restart();
-        } else {
-            if (ota_finish_err == ESP_ERR_OTA_VALIDATE_FAILED) {
+        }
+        else
+        {
+            if (ota_finish_err == ESP_ERR_OTA_VALIDATE_FAILED)
+            {
                 ESP_LOGE(TAG, "Image validation failed, image is corrupted");
             }
             ESP_LOGE(TAG, "ESP_HTTPS_OTA upgrade failed 0x%x", ota_finish_err);
@@ -200,9 +212,10 @@ ota_end:
 void app_main(void)
 {
     // Initialize NVS.
-    
+
     esp_err_t err = nvs_flash_init();
-    if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+    if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND)
+    {
         // 1.OTA app partition table has a smaller NVS partition size than the non-OTA
         // partition table. This size mismatch may cause NVS initialization to fail.
         // 2.NVS partition contains data in new format and cannot be recognized by this version of code.
@@ -210,7 +223,7 @@ void app_main(void)
         ESP_ERROR_CHECK(nvs_flash_erase());
         err = nvs_flash_init();
     }
-    ESP_ERROR_CHECK( err );
+    ESP_ERROR_CHECK(err);
 
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
@@ -218,8 +231,8 @@ void app_main(void)
     /* This helper function configures Wi-Fi or Ethernet, as selected in menuconfig.
      * Read "Establishing Wi-Fi or Ethernet Connection" section in
      * examples/protocols/README.md for more information about this function.
-    */
-  
+     */
+
     ESP_ERROR_CHECK(example_connect());
 
 #if defined(CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE)
@@ -230,38 +243,41 @@ void app_main(void)
      */
     const esp_partition_t *running = esp_ota_get_running_partition();
     esp_ota_img_states_t ota_state;
-    if (esp_ota_get_state_partition(running, &ota_state) == ESP_OK) {
-        if (ota_state == ESP_OTA_IMG_PENDING_VERIFY) {
-            if (esp_ota_mark_app_valid_cancel_rollback() == ESP_OK) {
+    if (esp_ota_get_state_partition(running, &ota_state) == ESP_OK)
+    {
+        if (ota_state == ESP_OTA_IMG_PENDING_VERIFY)
+        {
+            if (esp_ota_mark_app_valid_cancel_rollback() == ESP_OK)
+            {
                 ESP_LOGI(TAG, "App is valid, rollback cancelled successfully");
-            } else {
+            }
+            else
+            {
                 ESP_LOGE(TAG, "Failed to cancel rollback");
             }
         }
     }
 #endif
 
-
-
-   initialize_sntp();
-   wait_for_time();
+    initialize_sntp();
+    wait_for_time();
     xTaskCreate(&advanced_ota_example_task, "advanced_ota_example_task", 1024 * 8, NULL, 5, NULL);
-   //xTaskCreate(&led_blink_task, "led_blink_task", 2048, NULL, 5, NULL);
+   xTaskCreate(&led_blink_task, "led_blink_task", 2048, NULL, 5, NULL);
 }
 
 void led_blink_task(void *pvParameter)
 {
-   ESP_LOGI(TAG, "Blink task started");
+    ESP_LOGI(TAG, "Blink task started");
 
-    // Legacy configuration API
     gpio_pad_select_gpio(2);
     gpio_set_direction(2, GPIO_MODE_OUTPUT);
 
-    while (1) {
-        gpio_set_level(2, 1);    // LED ON
+    while (1)
+    {
+        gpio_set_level(2, 1);
         vTaskDelay(pdMS_TO_TICKS(500));
 
-        gpio_set_level(2, 0);    // LED OFF
+        gpio_set_level(2, 0);
         vTaskDelay(pdMS_TO_TICKS(500));
     }
 }
